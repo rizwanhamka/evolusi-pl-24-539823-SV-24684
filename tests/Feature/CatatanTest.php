@@ -14,7 +14,7 @@ class CatatanTest extends TestCase
     {
         $response = $this->get('/catatan');
 
-        $response->assertStatus(500);
+        $response->assertStatus(200);
         $response->assertSee('Aplikasi Catatan');
     }
 
