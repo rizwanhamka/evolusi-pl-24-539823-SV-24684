@@ -3,7 +3,7 @@ import { truncateText } from "./text";
 
 describe("truncateText", () => {
     it("mengembalikan teks asli jika panjang kurang dari batas", () => {
-        expect(truncateText("Halo dunia", 50)).toBe("Salah");
+        expect(truncateText("Halo dunia", 50)).toBe("Halo dunia");
     });
 
     it("memotong teks jika melebihi batas dan menambahkan ...", () => {
