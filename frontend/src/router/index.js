@@ -1,11 +1,11 @@
 import { createRouter, createWebHistory } from "vue-router";
-import Home from "../views/Home.vue";
+import HomePage from "../views/HomePage.vue";
 import CatatanList from "../views/CatatanList.vue";
 
 const router = createRouter({
     history: createWebHistory(),
     routes: [
-        { path: "/", name: "home", component: Home },
+        { path: "/", name: "home", component: HomePage },
         { path: "/catatan", name: "catatan", component: CatatanList },
     ],
 });
