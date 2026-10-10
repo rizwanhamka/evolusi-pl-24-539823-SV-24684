@@ -1,37 +1,43 @@
-# ===== Stage 1: Install dependencies PHP =====
-FROM php:8.2-fpm AS base
+# syntax=docker/dockerfile:1
 
-# Install ekstensi dan tools sistem yang dibutuhkan Laravel
-RUN apt-get update && apt-get install -y \
-    git \
-    unzip \
-    libzip-dev \
-    libpng-dev \
-    libonig-dev \
-    && docker-php-ext-install pdo pdo_mysql mbstring zip exif pcntl gd \
-    && rm -rf /var/lib/apt/lists/*
+# ========== STAGE 1: BUILD (boleh besar) ==========
+FROM composer:2.8 AS build
 
-# Install Composer
-COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+WORKDIR /app
+
+# Cache: salin composer.json & composer.lock lebih dulu (sama seperti Tugas 4)
+COPY composer.json composer.lock ./
+RUN composer install --no-dev --no-scripts --no-autoloader \
+    --no-interaction --prefer-dist --ignore-platform-reqs
+
+# Baru salin kode aplikasi, lalu buat autoloader
+COPY . .
+RUN composer dump-autoload --optimize --no-dev
+
+# ========== STAGE 2: RUNTIME (hanya yang dibutuhkan) ==========
+FROM php:8.2.27-cli-alpine AS runtime
+
+LABEL org.opencontainers.image.source="https://github.com/rizwanhamka/evolusi-pl-24-539823-sv-24684"
+
+# User non-root
+RUN addgroup -S app && adduser -S -G app app
 
 WORKDIR /var/www/html
 
-# --- PENTING: urutan cache ---
-# Salin HANYA composer.json dan composer.lock dulu, lalu install.
-# Selama kedua file ini tidak berubah, layer ini akan diambil dari cache
-# walaupun kode aplikasi di bawahnya berubah.
-COPY composer.json composer.lock ./
-RUN composer install --no-dev --no-scripts --no-interaction --prefer-dist --no-autoloader
+# Hanya hasil dari stage build (tanpa Composer, tanpa cache build)
+COPY --from=build --chown=app:app /app ./
 
-# Baru sekarang salin seluruh kode aplikasi
-COPY . .
+# Siapkan file SQLite dan folder yang harus bisa ditulis
+RUN touch database/database.sqlite \
+    && mkdir -p storage/framework/cache/data storage/framework/sessions \
+                storage/framework/views storage/logs bootstrap/cache \
+    && chown -R app:app storage bootstrap/cache database
 
-# Generate autoloader setelah semua file ada
-RUN composer dump-autoload --optimize
-
-# Pastikan permission folder storage & cache benar
-RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
+USER app
 
 EXPOSE 8000
 
-CMD ["php", "artisan", "serve", "--host=0.0.0.0", "--port=8000"]
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+  CMD wget -q -O /dev/null http://127.0.0.1:8000/up || exit 1
+
+CMD ["sh", "-c", "php artisan migrate --force && php artisan serve --host=0.0.0.0 --port=8000"]
