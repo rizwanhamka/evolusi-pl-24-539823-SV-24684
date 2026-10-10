@@ -9,3 +9,13 @@ storage/framework/cache
 tests
 .github
 *.md
+node_modules
+vendor
+.git
+.env
+frontend
+storage/logs
+storage/framework/cache
+tests
+.github
+*.md
